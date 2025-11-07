@@ -1,8 +1,10 @@
 # OID4VCI Example - Complete Verifiable Credentials Implementation
 
-A complete, production-ready implementation of OpenID for Verifiable Credential Issuance (OID4VCI) and OpenID for Verifiable Presentations (OID4VP) with a beautiful web UI.
+An example implementation of OpenID for Verifiable Credential Issuance (OID4VCI) and OpenID for Verifiable Presentations (OID4VP).
 
-## 🚀 Quick Start
+✅ **Successfully tested with Sphereon Wallet** - Issues credentials that can be added to real wallet apps!
+
+## Quick Start
 
 ### One Command to Run Everything
 
@@ -43,7 +45,7 @@ npm run build:agent
 npm start
 ```
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 oid4vci-example/
@@ -61,24 +63,28 @@ oid4vci-example/
 └── README.md                  # This file
 ```
 
-## 🎯 Features
+## Features
 
 ### VC Agent Library
-- ✅ DID management (did:key)
-- ✅ JWT-based Verifiable Credentials
+- ✅ DID management (did:key with Secp256k1)
+- ✅ JWT-based Verifiable Credentials (ES256 signatures)
 - ✅ JWT-based Verifiable Presentations
 - ✅ OID4VCI protocol (complete)
 - ✅ OID4VP protocol (complete)
 - ✅ 46 passing tests (unit + integration)
 - ✅ Full TypeScript support
+- ✅ Sphereon SSI-SDK integration
 
 ### Backend API
 - ✅ POST /api/offers - Create credential offers
-- ✅ POST /api/token - Exchange codes for tokens
-- ✅ POST /api/credential - Issue credentials
+- ✅ POST /api/token - Exchange codes for tokens (OAuth 2.0 compliant)
+- ✅ POST /api/credential - Issue credentials with proof binding
+- ✅ GET /.well-known/openid-credential-issuer - Issuer metadata endpoint
 - ✅ GET /health - Health check
 - ✅ 9 passing tests
 - ✅ Full OID4VCI protocol support
+- ✅ Network-accessible for mobile wallet testing
+- ✅ 4-digit PIN support (wallet standard)
 
 ### Frontend UI
 - ✅ Beautiful gradient design
@@ -139,7 +145,7 @@ npm run install:all
 npm run build:agent
 ```
 
-## 🧪 Manual Testing
+## Manual Testing
 
 ### Via Web UI
 
@@ -188,7 +194,7 @@ curl -X POST http://localhost:3001/api/credential \
   }'
 ```
 
-## 🏗️ Architecture
+## Architecture
 
 ### OID4VCI Flow
 
@@ -208,7 +214,7 @@ curl -X POST http://localhost:3001/api/credential \
 5. **Wallet** submits presentation to verifier
 6. **Verifier** validates signatures and claims
 
-## 📊 Test Coverage
+## Test Coverage
 
 - **VC Agent**: 46/46 tests passing ✓
   - Veramo Agent: 5 tests
@@ -225,24 +231,27 @@ curl -X POST http://localhost:3001/api/credential \
 
 **Total: 55 passing tests**
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 - **TypeScript** - Type-safe development
 - **Veramo** - DID and VC/VP operations
 - **Sphereon SSI-SDK** - OID4VCI and OID4VP protocols
+  - `@sphereon/ssi-sdk-ext.did-provider-key` - Secp256k1 DID provider
+  - `@sphereon/ssi-sdk-ext.did-resolver-key` - DID resolver
+  - `@sphereon/ssi-sdk.oid4vci-issuer` - OID4VCI implementation
 - **Express** - Backend API server
 - **React** - Frontend UI
 - **Vite** - Fast build tool
 - **Jest** - Testing framework
 - **QRCode.react** - QR code generation
 
-## 📚 Documentation
+## Documentation
 
 - [VC Agent README](./packages/vc-agent/README.md) - Complete API documentation
 - [Examples README](./packages/vc-agent/examples/README.md) - Usage examples
 - [Backend Tests](./packages/issuer-backend/src/__tests__/api.test.ts) - API test examples
 
-## 🔐 Standards Compliance
+## Standards Compliance
 
 - ✅ W3C Verifiable Credentials Data Model
 - ✅ W3C Verifiable Presentations
@@ -251,21 +260,42 @@ curl -X POST http://localhost:3001/api/credential \
 - ✅ Presentation Exchange (PEX)
 - ✅ DID Core Specification
 
+## Key Technical Details
+
+### Cryptography
+- **Key Type**: Secp256k1 (ES256 signatures)
+- **DID Method**: `did:key` with `zQ3` prefix (Secp256k1)
+- **Signature Algorithm**: ES256 (ECDSA with P-256 curve)
+- **Why Secp256k1?**: Required for compatibility with Sphereon Wallet and most mobile wallet apps
+
+### OID4VCI Implementation
+- **Grant Type**: Pre-authorized code flow
+- **PIN Length**: 4 digits (wallet standard)
+- **Credential Format**: `jwt_vc_json`
+- **Proof Binding**: Credentials bound to wallet's DID from proof JWT
+- **Network Mode**: Backend listens on `0.0.0.0` for mobile wallet access
+
+### Wallet Compatibility
+- ✅ **Sphereon Wallet** - Fully tested and working
+- ✅ Issuer metadata endpoint for wallet discovery
+- ✅ Proper credential configuration metadata
+- ✅ OAuth 2.0 token endpoint with form-urlencoded support
+
 ## 🚦 Next Steps
 
-- [ ] Deploy to production
+- [x] Successfully issue credentials to Sphereon Wallet
+- [ ] Demonstrate verifying a credential issued to the wallet
 - [ ] Add persistent storage (database)
 - [ ] Implement credential revocation
 - [ ] Add more credential types
-- [ ] Support additional DID methods
-- [ ] Build verifier UI
+- [ ] Support additional DID methods (did:jwk, did:web)
 - [ ] Add wallet app integration tests
 
-## 📝 License
+## License
 
 MIT
 
-## 🤝 Contributing
+## Contributing
 
 This is an example implementation for learning and development purposes.
 
