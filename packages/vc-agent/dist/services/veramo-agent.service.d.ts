@@ -20,8 +20,9 @@ export declare class VeramoAgentService {
     getAgent(): ConfiguredAgent;
     /**
      * Create a new did:key identifier
+     * @param keyType - The type of key to use (Ed25519 or Secp256k1)
      */
-    createIdentifier(): Promise<IIdentifier>;
+    createIdentifier(keyType?: 'Ed25519' | 'Secp256k1'): Promise<IIdentifier>;
     /**
      * Resolve a DID to its DID Document
      */

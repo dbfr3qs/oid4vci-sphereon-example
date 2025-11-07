@@ -3,11 +3,20 @@
  */
 
 /**
+ * Credential configuration in offer
+ */
+export interface CredentialConfiguration {
+  format: 'jwt_vc_json';
+  types: string[];
+  credentialSubject?: Record<string, any>;
+}
+
+/**
  * Credential offer with pre-authorized code
  */
 export interface CredentialOffer {
   credential_issuer: string;
-  credentials: string[];
+  credentials: (string | CredentialConfiguration)[];
   grants: {
     'urn:ietf:params:oauth:grant-type:pre-authorized_code': {
       'pre-authorized_code': string;

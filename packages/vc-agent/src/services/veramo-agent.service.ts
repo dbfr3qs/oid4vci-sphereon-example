@@ -10,10 +10,10 @@ import { DIDManager, MemoryDIDStore } from '@veramo/did-manager';
 import { KeyManager, MemoryKeyStore, MemoryPrivateKeyStore } from '@veramo/key-manager';
 import { KeyManagementSystem } from '@veramo/kms-local';
 import { DIDResolverPlugin } from '@veramo/did-resolver';
-import { KeyDIDProvider } from '@veramo/did-provider-key';
+import { SphereonKeyDidProvider } from '@sphereon/ssi-sdk-ext.did-provider-key';
+import { getResolver as getDidKeyResolver } from '@sphereon/ssi-sdk-ext.did-resolver-key';
 import { CredentialPlugin } from '@veramo/credential-w3c';
 import { DIDResolutionResult, Resolver } from 'did-resolver';
-import { getDidKeyResolver } from '@veramo/did-provider-key';
 
 /**
  * Type definition for the Veramo agent with all required plugins
@@ -61,7 +61,7 @@ export class VeramoAgentService {
           store: memoryDIDStore,
           defaultProvider: 'did:key',
           providers: {
-            'did:key': new KeyDIDProvider({
+            'did:key': new SphereonKeyDidProvider({
               defaultKms: 'local',
             }),
           },
@@ -83,11 +83,15 @@ export class VeramoAgentService {
 
   /**
    * Create a new did:key identifier
+   * @param keyType - The type of key to use (Ed25519 or Secp256k1)
    */
-  public async createIdentifier(): Promise<IIdentifier> {
+  public async createIdentifier(keyType: 'Ed25519' | 'Secp256k1' = 'Secp256k1'): Promise<IIdentifier> {
     return await this.agent.didManagerCreate({
       provider: 'did:key',
       kms: 'local',
+      options: {
+        type: keyType,  // did:key provider expects 'type', not 'keyType'
+      },
     });
   }
 

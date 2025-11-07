@@ -53,7 +53,7 @@ export declare class OID4VCIssuerService {
     /**
      * Issue credential with access token
      */
-    issueCredential(request: CredentialRequest, accessToken: string): Promise<CredentialResponse>;
+    issueCredential(request: CredentialRequest, accessToken: string, holderDid?: string): Promise<CredentialResponse>;
     /**
      * Generate a secure access token
      */

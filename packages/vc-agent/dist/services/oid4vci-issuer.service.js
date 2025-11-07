@@ -36,9 +36,10 @@ class OID4VCIssuerService {
         };
         this.offerStore.set(preAuthorizedCode, metadata);
         // Create OID4VCI credential offer
+        // Reference the credential by ID - wallet will fetch metadata from /.well-known/openid-credential-issuer
         const offer = {
             credential_issuer: this.config.issuerUrl,
-            credentials: [credentialType],
+            credentials: [credentialType], // Use credential ID that matches credentials_supported
             grants: {
                 'urn:ietf:params:oauth:grant-type:pre-authorized_code': {
                     'pre-authorized_code': preAuthorizedCode,
@@ -92,8 +93,8 @@ class OID4VCIssuerService {
      * Generate a user PIN
      */
     generateUserPin() {
-        // Generate a 6-digit PIN
-        return Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate a 4-digit PIN (standard for OID4VCI wallets)
+        return Math.floor(1000 + Math.random() * 9000).toString();
     }
     /**
      * Get issuer DID
@@ -153,7 +154,7 @@ class OID4VCIssuerService {
     /**
      * Issue credential with access token
      */
-    async issueCredential(request, accessToken) {
+    async issueCredential(request, accessToken, holderDid) {
         // Validate access token
         const tokenMetadata = this.tokenStore.get(accessToken);
         if (!tokenMetadata) {
@@ -173,10 +174,13 @@ class OID4VCIssuerService {
         if (!offerMetadata) {
             throw new Error('Invalid access token');
         }
+        // Use holder DID from proof if provided, otherwise use the one from offer
+        const subjectDid = holderDid || offerMetadata.subjectDid;
         // Create the credential using CredentialService
+        // Don't add 'id' here - the CredentialService will add it from subjectDid
         const credential = await this.config.credentialService.createCredential({
             issuerDid: this.config.issuerDid,
-            subjectDid: offerMetadata.subjectDid,
+            subjectDid: subjectDid,
             credentialSubject: offerMetadata.credentialSubject,
         });
         // Mark token as used

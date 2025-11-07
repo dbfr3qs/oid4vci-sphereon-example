@@ -6,10 +6,10 @@ const did_manager_1 = require("@veramo/did-manager");
 const key_manager_1 = require("@veramo/key-manager");
 const kms_local_1 = require("@veramo/kms-local");
 const did_resolver_1 = require("@veramo/did-resolver");
-const did_provider_key_1 = require("@veramo/did-provider-key");
+const ssi_sdk_ext_did_provider_key_1 = require("@sphereon/ssi-sdk-ext.did-provider-key");
+const ssi_sdk_ext_did_resolver_key_1 = require("@sphereon/ssi-sdk-ext.did-resolver-key");
 const credential_w3c_1 = require("@veramo/credential-w3c");
 const did_resolver_2 = require("did-resolver");
-const did_provider_key_2 = require("@veramo/did-provider-key");
 /**
  * Service for managing Veramo agent operations including DID and key management
  */
@@ -29,7 +29,7 @@ class VeramoAgentService {
         const secretKey = '29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c';
         // Setup DID resolver for did:key
         const didResolver = new did_resolver_2.Resolver({
-            ...(0, did_provider_key_2.getDidKeyResolver)(),
+            ...(0, ssi_sdk_ext_did_resolver_key_1.getResolver)(),
         });
         return (0, core_1.createAgent)({
             plugins: [
@@ -43,7 +43,7 @@ class VeramoAgentService {
                     store: memoryDIDStore,
                     defaultProvider: 'did:key',
                     providers: {
-                        'did:key': new did_provider_key_1.KeyDIDProvider({
+                        'did:key': new ssi_sdk_ext_did_provider_key_1.SphereonKeyDidProvider({
                             defaultKms: 'local',
                         }),
                     },
@@ -63,11 +63,15 @@ class VeramoAgentService {
     }
     /**
      * Create a new did:key identifier
+     * @param keyType - The type of key to use (Ed25519 or Secp256k1)
      */
-    async createIdentifier() {
+    async createIdentifier(keyType = 'Secp256k1') {
         return await this.agent.didManagerCreate({
             provider: 'did:key',
             kms: 'local',
+            options: {
+                type: keyType, // did:key provider expects 'type', not 'keyType'
+            },
         });
     }
     /**

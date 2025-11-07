@@ -3,7 +3,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import axios from 'axios';
 import './App.css';
 
-const API_URL = 'http://localhost:3001';
+// Try to get the network IP from the backend, fallback to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 interface CredentialOffer {
   offer: any;
@@ -131,9 +132,9 @@ function App() {
 
           {offer.userPin && (
             <div className="pin-section">
-              <h3>User PIN</h3>
+              <h3>User PIN (4 digits)</h3>
               <div className="pin-display">{offer.userPin}</div>
-              <p className="pin-hint">Share this PIN with the user separately</p>
+              <p className="pin-hint">Share this 4-digit PIN with the user to complete the credential issuance</p>
             </div>
           )}
 

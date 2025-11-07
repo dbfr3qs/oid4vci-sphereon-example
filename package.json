@@ -1,0 +1,32 @@
+{
+  "name": "oid4vci-example",
+  "version": "1.0.0",
+  "description": "Complete OID4VCI and OID4VP implementation with issuer UI",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd packages/vc-agent && npm install && cd ../issuer-backend && npm install && cd ../issuer-frontend && npm install",
+    "build:agent": "cd packages/vc-agent && npm run build",
+    "test:agent": "cd packages/vc-agent && npm test",
+    "test:backend": "cd packages/issuer-backend && npm test",
+    "backend": "cd packages/issuer-backend && npm run dev",
+    "frontend": "cd packages/issuer-frontend && npm run dev",
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue,magenta\" \"npm run backend\" \"npm run frontend\"",
+    "start": "npm run dev",
+    "example:basic": "cd packages/vc-agent && npm run example",
+    "example:oid4vci": "cd packages/vc-agent && npm run example:oid4vci",
+    "example:oid4vp": "cd packages/vc-agent && npm run example:oid4vp"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "verifiable-credentials",
+    "oid4vci",
+    "oid4vp",
+    "openid",
+    "ssi",
+    "did"
+  ],
+  "author": "",
+  "license": "MIT"
+}
