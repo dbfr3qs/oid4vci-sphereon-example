@@ -33,4 +33,14 @@ export declare class CredentialService {
      * Verify a Verifiable Presentation
      */
     verifyPresentation(presentation: VerifiablePresentation): Promise<VerificationResult>;
+    /**
+     * Verify a VP JWT with audience and nonce validation
+     */
+    verifyPresentationJWT(vpJwt: string, options?: {
+        audience?: string;
+        nonce?: string;
+        domain?: string;
+    }): Promise<VerificationResult & {
+        payload?: any;
+    }>;
 }

@@ -123,22 +123,28 @@ class OID4VPVerifierService {
                     },
                 };
             }
-            const payload = JSON.parse(Buffer.from(jwtParts[1], 'base64').toString());
-            const vp = payload.vp;
-            // Verify nonce matches
-            if (payload.nonce !== metadata.nonce) {
+            // Perform full cryptographic verification with audience and nonce validation
+            console.log('[OID4VPVerifier] Starting cryptographic verification...');
+            console.log('[OID4VPVerifier] Expected audience:', this.config.verifierUrl);
+            console.log('[OID4VPVerifier] Expected nonce:', metadata.nonce);
+            const vpVerification = await this.config.credentialService.verifyPresentationJWT(vpToken, {
+                audience: this.config.verifierUrl,
+                nonce: metadata.nonce,
+            });
+            if (!vpVerification.verified) {
+                console.log('[OID4VPVerifier] ✗ VP verification failed:', vpVerification.error);
                 return {
                     verified: false,
                     presentationValid: false,
                     credentialsValid: false,
                     matchesDefinition: false,
-                    error: {
-                        message: 'Nonce mismatch - presentation nonce does not match request',
-                    },
+                    error: vpVerification.error,
                 };
             }
-            // For now, skip full cryptographic verification and just validate structure
-            // TODO: Add proper JWT signature verification with audience validation
+            console.log('[OID4VPVerifier] ✓ VP JWT verified successfully');
+            // Extract VP from verified payload
+            const verifiedPayload = vpVerification.payload;
+            const vp = verifiedPayload.vp;
             // Basic validation: check that we have a VP and credentials
             if (!vp || !vp.verifiableCredential) {
                 return {
@@ -151,12 +157,8 @@ class OID4VPVerifierService {
                     },
                 };
             }
-            // Check audience if present
-            if (payload.aud && payload.aud !== this.config.verifierUrl) {
-                console.log(`Warning: Audience mismatch. Expected: ${this.config.verifierUrl}, Got: ${payload.aud}`);
-                // For now, just log it but don't fail
-            }
             // Verify credentials in the presentation
+            console.log('[OID4VPVerifier] Verifying credentials in presentation...');
             const credentials = Array.isArray(vp.verifiableCredential)
                 ? vp.verifiableCredential
                 : [vp.verifiableCredential];
@@ -165,20 +167,22 @@ class OID4VPVerifierService {
                 try {
                     const vcVerification = await this.config.credentialService.verifyCredential(credential);
                     if (!vcVerification.verified) {
-                        console.log('Credential verification failed:', vcVerification.error);
+                        console.log('[OID4VPVerifier] ✗ Credential verification failed:', vcVerification.error);
                         allCredentialsValid = false;
                         break;
                     }
+                    console.log('[OID4VPVerifier] ✓ Credential verified');
                 }
                 catch (err) {
-                    console.log('Error verifying credential:', err);
-                    // For demo purposes, continue even if verification fails
-                    // allCredentialsValid = false;
+                    console.log('[OID4VPVerifier] Error verifying credential:', err);
+                    allCredentialsValid = false;
+                    break;
                 }
             }
             // Mark as verified
             metadata.verified = true;
             this.requestStore.set(state, metadata);
+            console.log('[OID4VPVerifier] ✓ All verifications passed');
             return {
                 verified: true,
                 presentationValid: true,

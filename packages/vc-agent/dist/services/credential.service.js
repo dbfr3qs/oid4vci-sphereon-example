@@ -133,5 +133,133 @@ class CredentialService {
             };
         }
     }
+    /**
+     * Verify a VP JWT with audience and nonce validation
+     */
+    async verifyPresentationJWT(vpJwt, options = {}) {
+        try {
+            // Decode JWT to get payload
+            const parts = vpJwt.split('.');
+            if (parts.length !== 3) {
+                return {
+                    verified: false,
+                    error: {
+                        message: 'Invalid JWT format',
+                        errorCode: 'invalid_jwt',
+                    },
+                };
+            }
+            const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+            console.log('[CredentialService] Verifying VP JWT');
+            console.log('[CredentialService] Header:', JSON.stringify(header, null, 2));
+            console.log('[CredentialService] Payload:', JSON.stringify(payload, null, 2));
+            // Validate audience if provided
+            if (options.audience) {
+                if (!payload.aud) {
+                    return {
+                        verified: false,
+                        error: {
+                            message: 'JWT missing audience claim',
+                            errorCode: 'missing_audience',
+                        },
+                    };
+                }
+                const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+                if (!audiences.includes(options.audience)) {
+                    return {
+                        verified: false,
+                        error: {
+                            message: `Audience mismatch. Expected: ${options.audience}, Got: ${payload.aud}`,
+                            errorCode: 'invalid_audience',
+                        },
+                    };
+                }
+                console.log('[CredentialService] ✓ Audience validated:', payload.aud);
+            }
+            // Validate nonce if provided
+            if (options.nonce) {
+                if (payload.nonce !== options.nonce) {
+                    return {
+                        verified: false,
+                        error: {
+                            message: 'Nonce mismatch',
+                            errorCode: 'invalid_nonce',
+                        },
+                    };
+                }
+                console.log('[CredentialService] ✓ Nonce validated');
+            }
+            // Validate expiration
+            if (payload.exp) {
+                const now = Math.floor(Date.now() / 1000);
+                if (payload.exp < now) {
+                    return {
+                        verified: false,
+                        error: {
+                            message: 'JWT expired',
+                            errorCode: 'expired',
+                        },
+                    };
+                }
+                console.log('[CredentialService] ✓ Expiration validated');
+            }
+            // Validate not before
+            if (payload.nbf) {
+                const now = Math.floor(Date.now() / 1000);
+                if (payload.nbf > now) {
+                    return {
+                        verified: false,
+                        error: {
+                            message: 'JWT not yet valid',
+                            errorCode: 'not_yet_valid',
+                        },
+                    };
+                }
+            }
+            // Verify JWT signature using Veramo
+            const agent = this.veramoService.getAgent();
+            // Reconstruct presentation from JWT for Veramo verification
+            const vp = payload.vp;
+            const presentation = {
+                ...vp,
+                proof: {
+                    type: 'JwtProof2020',
+                    jwt: vpJwt,
+                },
+            };
+            console.log('[CredentialService] Verifying JWT signature with Veramo...');
+            const result = await agent.verifyPresentation({
+                presentation,
+                // Pass domain (audience) and challenge (nonce) for proper JWT validation
+                ...(options.audience && { domain: options.audience }),
+                ...(options.nonce && { challenge: options.nonce }),
+            });
+            if (!result.verified) {
+                console.log('[CredentialService] ✗ Signature verification failed:', result.error);
+                return {
+                    verified: false,
+                    error: {
+                        message: result.error?.message || 'Signature verification failed',
+                        errorCode: 'invalid_signature',
+                    },
+                };
+            }
+            console.log('[CredentialService] ✓ JWT signature verified');
+            return {
+                verified: true,
+                payload,
+            };
+        }
+        catch (error) {
+            console.error('[CredentialService] Error verifying VP JWT:', error);
+            return {
+                verified: false,
+                error: {
+                    message: error.message || 'Verification failed',
+                },
+            };
+        }
+    }
 }
 exports.CredentialService = CredentialService;
