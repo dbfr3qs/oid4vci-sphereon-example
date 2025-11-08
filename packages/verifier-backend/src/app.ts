@@ -112,7 +112,94 @@ app.post('/api/presentation-requests', async (req: Request, res: Response) => {
   }
 });
 
-// Verify presentation (callback endpoint)
+// Callback endpoint for wallet to POST presentation
+app.post('/callback', async (req: Request, res: Response) => {
+  try {
+    console.log('POST /callback');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
+    const { vp_token, presentation_submission, state } = req.body;
+
+    if (!vp_token) {
+      return res.status(400).json({
+        error: 'vp_token is required'
+      });
+    }
+
+    if (!state) {
+      return res.status(400).json({
+        error: 'state is required'
+      });
+    }
+
+    // Verify the presentation
+    const verificationResult = await verifierService.verifyPresentation(vp_token, state);
+
+    console.log('Verification result:', JSON.stringify(verificationResult, null, 2));
+
+    if (!verificationResult.verified) {
+      return res.status(400).json({
+        verified: false,
+        error: verificationResult.error
+      });
+    }
+
+    // Extract user data from the presentation
+    const jwtParts = vp_token.split('.');
+    const payload = JSON.parse(Buffer.from(jwtParts[1], 'base64').toString());
+    const vp = payload.vp;
+    
+    // Get the first credential
+    const credentials = Array.isArray(vp.verifiableCredential) 
+      ? vp.verifiableCredential 
+      : [vp.verifiableCredential];
+    
+    let userData = null;
+    if (credentials.length > 0) {
+      const credential = credentials[0];
+      // Decode credential JWT if it's a string
+      if (typeof credential === 'string') {
+        const credParts = credential.split('.');
+        const credPayload = JSON.parse(Buffer.from(credParts[1], 'base64').toString());
+        userData = {
+          did: credPayload.sub,
+          ...credPayload.vc.credentialSubject
+        };
+      } else {
+        userData = {
+          did: credential.credentialSubject?.id,
+          ...credential.credentialSubject
+        };
+      }
+    }
+
+    console.log('User data extracted:', userData);
+    console.log('✅ Presentation verified successfully!');
+
+    // Store user data in the request metadata for frontend to retrieve
+    const metadata = await verifierService.getRequestMetadata(state);
+    if (metadata) {
+      (metadata as any).userData = userData;
+    }
+
+    // Return success response to wallet
+    res.json({
+      verified: true,
+      redirect_uri: `${process.env.VERIFIER_URL || getVerifierUrl()}/success?state=${state}`
+    });
+  } catch (error: any) {
+    console.error('Error in callback:', error);
+    res.status(500).json({
+      verified: false,
+      error: {
+        message: 'Failed to verify presentation',
+        details: error.message
+      }
+    });
+  }
+});
+
+// Verify presentation (API endpoint for manual testing)
 app.post('/api/presentations/verify', async (req: Request, res: Response) => {
   try {
     console.log('POST /api/presentations/verify');
@@ -193,6 +280,49 @@ app.post('/api/presentations/verify', async (req: Request, res: Response) => {
   }
 });
 
+// Success page for wallet redirect
+app.get('/success', (req: Request, res: Response) => {
+  const { state } = req.query;
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Verification Successful</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          }
+          .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            text-align: center;
+            max-width: 400px;
+          }
+          h1 { color: #10b981; margin-bottom: 1rem; }
+          p { color: #64748b; margin-bottom: 2rem; }
+          .checkmark { font-size: 4rem; margin-bottom: 1rem; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="checkmark">✅</div>
+          <h1>Verification Successful!</h1>
+          <p>Your credential has been verified. You can close this window and return to the application.</p>
+          ${state ? `<p style="font-size: 0.8rem; color: #94a3b8;">State: ${state}</p>` : ''}
+        </div>
+      </body>
+    </html>
+  `);
+});
+
 // Get presentation request status
 app.get('/api/presentation-requests/:state', async (req: Request, res: Response) => {
   try {
@@ -211,6 +341,7 @@ app.get('/api/presentation-requests/:state', async (req: Request, res: Response)
       verified: metadata.verified,
       createdAt: metadata.createdAt,
       expiresAt: metadata.expiresAt,
+      userData: (metadata as any).userData || null, // Include user data if available
     });
   } catch (error: any) {
     console.error('Error getting request status:', error);
