@@ -1,13 +1,43 @@
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import { initializeApp } from './app';
 
-const PORT = process.env.PORT || 3002;
+const PORT = parseInt(process.env.PORT || '3002', 10);
 
 async function start() {
   try {
     const app = await initializeApp();
     
+    // Create HTTP server
+    const httpServer = createServer(app);
+    
+    // Initialize Socket.IO
+    const io = new SocketIOServer(httpServer, {
+      cors: {
+        origin: '*', // Allow all origins for development
+        methods: ['GET', 'POST']
+      }
+    });
+    
+    // Store io instance on app for use in routes
+    (app as any).io = io;
+    
+    io.on('connection', (socket) => {
+      console.log('🔌 Client connected:', socket.id);
+      
+      socket.on('disconnect', () => {
+        console.log('🔌 Client disconnected:', socket.id);
+      });
+      
+      // Allow clients to subscribe to specific presentation requests
+      socket.on('subscribe', (state: string) => {
+        console.log(`🔔 Client ${socket.id} subscribed to state: ${state}`);
+        socket.join(`presentation:${state}`);
+      });
+    });
+    
     // Start server on all interfaces for network access
-    app.listen(PORT, '0.0.0.0', () => {
+    httpServer.listen(PORT, '0.0.0.0', () => {
       const { networkInterfaces } = require('os');
       const nets = networkInterfaces();
       

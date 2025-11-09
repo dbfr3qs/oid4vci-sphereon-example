@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { QRCodeSVG } from 'qrcode.react';
+import { io, Socket } from 'socket.io-client';
 import './App.css';
 
 // Get API URL from environment or use network IP
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+const API_URL = import.meta.env.VITE_VERIFIER_API_URL || 'http://localhost:3002';
 
 interface UserData {
   did: string;
@@ -25,30 +26,47 @@ function App() {
   const [verifying, setVerifying] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
-  // Poll for verification status
+  // Initialize WebSocket connection
   useEffect(() => {
-    if (!presentationRequest || loggedIn) return;
+    console.log('🔌 Connecting to WebSocket server...');
+    const socket = io(API_URL, {
+      transports: ['websocket', 'polling']
+    });
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await axios.get(
-          `${API_URL}/api/presentation-requests/${presentationRequest.state}`
-        );
+    socket.on('connect', () => {
+      console.log('✅ WebSocket connected:', socket.id);
+    });
 
-        if (response.data.verified && response.data.userData) {
-          setVerifying(false);
-          setUserData(response.data.userData);
-          setLoggedIn(true);
-          clearInterval(pollInterval);
-        }
-      } catch (err) {
-        console.error('Error polling status:', err);
+    socket.on('disconnect', () => {
+      console.log('❌ WebSocket disconnected');
+    });
+
+    socket.on('verification-complete', (data: { state: string; verified: boolean; userData: UserData }) => {
+      console.log('🎉 Verification complete event received:', data);
+      if (data.verified && data.userData) {
+        setVerifying(false);
+        setUserData(data.userData);
+        setLoggedIn(true);
       }
-    }, 2000); // Poll every 2 seconds
+    });
 
-    return () => clearInterval(pollInterval);
-  }, [presentationRequest, loggedIn]);
+    socketRef.current = socket;
+
+    return () => {
+      console.log('🔌 Disconnecting WebSocket...');
+      socket.disconnect();
+    };
+  }, []);
+
+  // Subscribe to presentation request updates
+  useEffect(() => {
+    if (!presentationRequest || !socketRef.current) return;
+
+    console.log(`🔔 Subscribing to state: ${presentationRequest.state}`);
+    socketRef.current.emit('subscribe', presentationRequest.state);
+  }, [presentationRequest]);
 
   const createPresentationRequest = async () => {
     setLoading(true);

@@ -182,6 +182,17 @@ app.post('/callback', async (req: Request, res: Response) => {
       (metadata as any).userData = userData;
     }
 
+    // Emit WebSocket event to notify frontend
+    const io = (req.app as any).io;
+    if (io) {
+      console.log(`🔔 Emitting verification event for state: ${state}`);
+      io.to(`presentation:${state}`).emit('verification-complete', {
+        state,
+        verified: true,
+        userData
+      });
+    }
+
     // Return success response to wallet
     res.json({
       verified: true,
