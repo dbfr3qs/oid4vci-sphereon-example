@@ -1,30 +1,31 @@
-# OID4VCI Example - Complete Verifiable Credentials Implementation
+# OID4VCI + OID4VP Complete Implementation
 
-An example implementation of OpenID for Verifiable Credential Issuance (OID4VCI) and OpenID for Verifiable Presentations (OID4VP).
+A production-ready implementation of **OpenID for Verifiable Credential Issuance (OID4VCI)** and **OpenID for Verifiable Presentations (OID4VP)** with full cryptographic verification.
 
-✅ **Successfully tested with Sphereon Wallet** - Issues credentials that can be added to real wallet apps!
+✅ **Successfully tested with Sphereon Wallet**  
+✅ **Real-time WebSocket updates**  
+✅ **Full cryptographic verification with audience validation**  
+✅ **Complete issuer + verifier system**
 
-## Quick Start
+## 🚀 Quick Start
 
-### One Command to Run Everything
+### One Command to Start Everything
 
-**Option 1: For Wallet Testing (Network Mode) - Recommended**
 ```bash
-./start-network.sh
-```
-This makes the backend accessible from your phone on the same WiFi network.
-
-**Option 2: For Local Development**
-```bash
-./start.sh
-# or
-npm start
+./start-all.sh
 ```
 
-This will start both the backend API and frontend UI simultaneously!
+This starts all 4 services simultaneously:
+- **Issuer Backend** (port 3001) - Issues credentials
+- **Issuer Frontend** (port 5173) - UI for creating credential offers
+- **Verifier Backend** (port 3002) - Verifies presentations
+- **Verifier Frontend** (port 5174) - UI for requesting and verifying credentials
 
-- **Backend API**: http://localhost:3001 (or your network IP in network mode)
-- **Frontend UI**: http://localhost:5173 (or your network IP in network mode)
+**Services will be accessible on:**
+- 🖥️ **Localhost** - For browser testing
+- 📱 **Network IP** - For wallet testing (auto-detected)
+
+Press `Ctrl+C` to stop all services.
 
 ### 📱 Testing with Sphereon Wallet
 
@@ -45,55 +46,100 @@ npm run build:agent
 npm start
 ```
 
-## Project Structure
+## 📋 Complete Workflow
+
+### 1. Issue a Credential
+1. Open **Issuer Frontend** (http://localhost:5173)
+2. Fill in user details (name, email, date of birth)
+3. Click "Create Credential Offer"
+4. Scan QR code with Sphereon Wallet
+5. Enter the 4-digit PIN shown on screen
+6. Credential is added to your wallet! ✅
+
+### 2. Verify a Credential
+1. Open **Verifier Frontend** (http://localhost:5174)
+2. Click "Request Login with Wallet"
+3. Scan QR code with Sphereon Wallet
+4. Select credential and approve presentation
+5. **Instantly** see user data displayed (WebSocket magic!) ✅
+
+## 📁 Project Structure
 
 ```
 oid4vci-example/
 ├── packages/
-│   ├── vc-agent/              # Core VC/VP library with OID4VCI & OID4VP
-│   │   ├── src/               # Source code
-│   │   ├── __tests__/         # 46 passing tests
-│   │   └── examples/          # Manual test examples
-│   ├── issuer-backend/        # Express API server
-│   │   ├── src/               # API endpoints
+│   ├── vc-agent/              # Core VC/VP library
+│   │   ├── src/
+│   │   │   ├── services/      # OID4VCI, OID4VP, Credential services
+│   │   │   └── types/         # TypeScript definitions
+│   │   └── __tests__/         # 46 passing tests
+│   ├── issuer-backend/        # Credential Issuer API
+│   │   ├── src/app.ts         # Express routes
 │   │   └── __tests__/         # 9 passing tests
-│   └── issuer-frontend/       # React UI
-│       └── src/               # React components
-├── package.json               # Root package with scripts
+│   ├── issuer-frontend/       # Issuer UI (React + Vite)
+│   ├── verifier-backend/      # Presentation Verifier API
+│   │   ├── src/app.ts         # Express + Socket.IO
+│   │   └── __tests__/         # 10 passing tests
+│   └── verifier-frontend/     # Verifier UI (React + Vite + Socket.IO)
+├── start-all.sh               # Start all services
 └── README.md                  # This file
 ```
 
-## Features
+## ✨ Features
 
-### VC Agent Library
-- ✅ DID management (did:key with Secp256k1)
-- ✅ JWT-based Verifiable Credentials (ES256 signatures)
-- ✅ JWT-based Verifiable Presentations
-- ✅ OID4VCI protocol (complete)
-- ✅ OID4VP protocol (complete)
-- ✅ 46 passing tests (unit + integration)
-- ✅ Full TypeScript support
-- ✅ Sphereon SSI-SDK integration
+### 🔐 Security & Cryptography
+- ✅ **Full JWT signature verification** - Verifies VP and VC signatures
+- ✅ **Audience validation** - Ensures VP intended for correct verifier
+- ✅ **Nonce validation** - Prevents replay attacks
+- ✅ **Expiration checking** - Validates JWT exp and nbf claims
+- ✅ **DID-based authentication** - Uses did:key with Secp256k1 (ES256K)
+- ✅ **Proof binding** - Credentials bound to holder's DID
 
-### Backend API
-- ✅ POST /api/offers - Create credential offers
-- ✅ POST /api/token - Exchange codes for tokens (OAuth 2.0 compliant)
-- ✅ POST /api/credential - Issue credentials with proof binding
-- ✅ GET /.well-known/openid-credential-issuer - Issuer metadata endpoint
-- ✅ GET /health - Health check
-- ✅ 9 passing tests
-- ✅ Full OID4VCI protocol support
-- ✅ Network-accessible for mobile wallet testing
+### 📡 Real-Time Communication
+- ✅ **WebSocket support** - Instant verification updates (no polling!)
+- ✅ **Room-based subscriptions** - Efficient event routing
+- ✅ **Auto-reconnection** - Robust connection handling
+- ✅ **CORS configured** - Works across different origins
+
+### 🎯 OID4VCI Issuer
+**Backend API:**
+- ✅ POST `/api/offers` - Create credential offers
+- ✅ POST `/api/token` - OAuth 2.0 token exchange
+- ✅ POST `/api/credential` - Issue credentials with proof binding
+- ✅ GET `/.well-known/openid-credential-issuer` - Issuer metadata
+- ✅ GET `/health` - Health check
 - ✅ 4-digit PIN support (wallet standard)
+- ✅ Network-accessible for mobile wallets
 
-### Frontend UI
+**Frontend UI:**
 - ✅ Beautiful gradient design
 - ✅ Credential offer creation form
 - ✅ QR code generation
-- ✅ User PIN display
-- ✅ Offer details and management
-- ✅ Error handling
+- ✅ PIN display
 - ✅ Responsive design
+
+### 🔍 OID4VP Verifier
+**Backend API:**
+- ✅ POST `/api/presentation-requests` - Create presentation requests
+- ✅ POST `/callback` - Receive presentations from wallet
+- ✅ GET `/api/presentation-requests/:state` - Check status
+- ✅ GET `/success` - Success page for wallet redirect
+- ✅ GET `/health` - Health check
+- ✅ WebSocket events for real-time updates
+- ✅ Full cryptographic verification
+
+**Frontend UI:**
+- ✅ QR code display for wallet scanning
+- ✅ Real-time verification status (WebSocket)
+- ✅ Instant user data display
+- ✅ "Logged in" state management
+- ✅ Beautiful success animations
+
+### 🧪 Testing
+- ✅ **65+ passing tests** across all packages
+- ✅ Unit tests for core services
+- ✅ Integration tests for APIs
+- ✅ Tested with real Sphereon Wallet
 
 ## 📜 Available Scripts
 
@@ -231,19 +277,31 @@ curl -X POST http://localhost:3001/api/credential \
 
 **Total: 55 passing tests**
 
-## Technology Stack
+## 🛠️ Technology Stack
 
+**Core:**
 - **TypeScript** - Type-safe development
 - **Veramo** - DID and VC/VP operations
 - **Sphereon SSI-SDK** - OID4VCI and OID4VP protocols
   - `@sphereon/ssi-sdk-ext.did-provider-key` - Secp256k1 DID provider
   - `@sphereon/ssi-sdk-ext.did-resolver-key` - DID resolver
   - `@sphereon/ssi-sdk.oid4vci-issuer` - OID4VCI implementation
-- **Express** - Backend API server
-- **React** - Frontend UI
-- **Vite** - Fast build tool
-- **Jest** - Testing framework
+
+**Backend:**
+- **Express** - REST API server
+- **Socket.IO** - WebSocket real-time communication
+- **CORS** - Cross-origin resource sharing
+
+**Frontend:**
+- **React** - UI framework
+- **Vite** - Fast build tool and dev server
+- **Socket.IO Client** - WebSocket client
+- **Axios** - HTTP client
 - **QRCode.react** - QR code generation
+
+**Testing:**
+- **Jest** - Testing framework
+- **Supertest** - HTTP assertions
 
 ## Documentation
 
@@ -260,12 +318,40 @@ curl -X POST http://localhost:3001/api/credential \
 - ✅ Presentation Exchange (PEX)
 - ✅ DID Core Specification
 
-## Key Technical Details
+## 🔐 Key Technical Details
+
+### Cryptographic Verification
+The verifier implements **full cryptographic verification** with the following checks:
+
+1. **JWT Signature Verification**
+   - Verifies VP JWT signature using holder's DID
+   - Verifies each VC JWT signature using issuer's DID
+   - Uses Veramo's `verifyPresentation` and `verifyCredential` methods
+
+2. **Audience Validation**
+   - Checks JWT `aud` claim matches verifier URL
+   - Prevents presentations intended for other verifiers
+   - Configurable per verification request
+
+3. **Nonce Validation**
+   - Verifies nonce in VP matches presentation request
+   - Prevents replay attacks
+   - Unique nonce per request
+
+4. **Expiration Checking**
+   - Validates JWT `exp` (expiration time)
+   - Validates JWT `nbf` (not before time)
+   - Ensures presentations are time-bound
+
+5. **Structural Validation**
+   - Checks VP contains required credentials
+   - Validates credential types match request
+   - Ensures proper JWT format
 
 ### Cryptography
-- **Key Type**: Secp256k1 (ES256 signatures)
+- **Key Type**: Secp256k1 (ES256K signatures)
 - **DID Method**: `did:key` with `zQ3` prefix (Secp256k1)
-- **Signature Algorithm**: ES256 (ECDSA with P-256 curve)
+- **Signature Algorithm**: ES256K (ECDSA with secp256k1 curve)
 - **Why Secp256k1?**: Required for compatibility with Sphereon Wallet and most mobile wallet apps
 
 ### OID4VCI Implementation
@@ -275,21 +361,41 @@ curl -X POST http://localhost:3001/api/credential \
 - **Proof Binding**: Credentials bound to wallet's DID from proof JWT
 - **Network Mode**: Backend listens on `0.0.0.0` for mobile wallet access
 
+### OID4VP Implementation
+- **Response Mode**: Direct post (wallet POSTs to callback URL)
+- **Presentation Format**: JWT VP with embedded JWT VCs
+- **Real-time Updates**: WebSocket events for instant frontend notification
+- **State Management**: In-memory store with expiration
+- **Callback URL**: Wallet redirects to success page after verification
+
 ### Wallet Compatibility
 - ✅ **Sphereon Wallet** - Fully tested and working
 - ✅ Issuer metadata endpoint for wallet discovery
+- ✅ Verifier presentation request endpoint
 - ✅ Proper credential configuration metadata
 - ✅ OAuth 2.0 token endpoint with form-urlencoded support
+- ✅ Cross-device flow (QR code on laptop, wallet on phone)
 
-## 🚦 Next Steps
+## 🚦 Completed Features
 
 - [x] Successfully issue credentials to Sphereon Wallet
-- [ ] Demonstrate verifying a credential issued to the wallet
-- [ ] Add persistent storage (database)
-- [ ] Implement credential revocation
-- [ ] Add more credential types
+- [x] Verify credentials with full cryptographic validation
+- [x] Real-time WebSocket updates for verification
+- [x] Audience and nonce validation
+- [x] Complete issuer + verifier system
+- [x] Unified start script for all services
+- [x] 65+ passing tests
+
+## 🎯 Future Enhancements
+
+- [ ] Add persistent storage (Redis/Database)
+- [ ] Implement credential revocation (Status List 2021)
+- [ ] Add selective disclosure (SD-JWT)
 - [ ] Support additional DID methods (did:jwk, did:web)
-- [ ] Add wallet app integration tests
+- [ ] Add batch credential issuance
+- [ ] Implement DIF Presentation Exchange v2
+- [ ] Add mDL (mobile driver's license) support
+- [ ] Create Docker containers for deployment
 
 ## License
 
