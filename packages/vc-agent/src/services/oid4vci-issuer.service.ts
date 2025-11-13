@@ -231,7 +231,8 @@ export class OID4VCIssuerService {
   async issueCredential(
     request: CredentialRequest,
     accessToken: string,
-    holderDid?: string
+    holderDid?: string,
+    credentialStatus?: any
   ): Promise<CredentialResponse> {
     // Validate access token
     const tokenMetadata = this.tokenStore.get(accessToken);
@@ -266,6 +267,7 @@ export class OID4VCIssuerService {
       issuerDid: this.config.issuerDid,
       subjectDid: subjectDid,
       credentialSubject: offerMetadata.credentialSubject,
+      credentialStatus, // Include status if provided
     });
 
     // Mark token as used

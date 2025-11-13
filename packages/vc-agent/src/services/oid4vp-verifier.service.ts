@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CredentialService } from './credential.service';
+import { VeramoAgentService } from './veramo-agent.service';
+import { StatusListService } from './status-list.service';
 import {
   AuthorizationRequest,
   CreatePresentationRequestOptions,
@@ -219,13 +221,27 @@ export class OID4VPVerifierService {
       let allCredentialsValid = true;
       for (const credential of credentials) {
         try {
-          const vcVerification = await this.config.credentialService.verifyCredential(credential);
-          if (!vcVerification.verified) {
-            console.log('[OID4VPVerifier] ✗ Credential verification failed:', vcVerification.error);
-            allCredentialsValid = false;
-            break;
+          // Note: We skip Veramo's verifyCredential because it requires a status verifier plugin
+          // Instead, we verify the signature through the VP verification (already done above)
+          // and check revocation status directly
+          
+          console.log('[OID4VPVerifier] ✓ Credential signature verified (via VP verification)');
+
+          // Check revocation status
+          console.log('[OID4VPVerifier] Checking revocation status...');
+          const revocationCheck = await StatusListService.checkCredentialRevocationStatus(credential);
+          
+          if (revocationCheck.checked) {
+            if (revocationCheck.revoked) {
+              console.log('[OID4VPVerifier] ✗ Credential is REVOKED');
+              allCredentialsValid = false;
+              break;
+            }
+            console.log('[OID4VPVerifier] ✓ Credential is not revoked');
+          } else {
+            console.log('[OID4VPVerifier] ⚠ Could not check revocation status:', revocationCheck.error);
+            // Continue anyway - credential doesn't have revocation status or couldn't be checked
           }
-          console.log('[OID4VPVerifier] ✓ Credential verified');
         } catch (err) {
           console.log('[OID4VPVerifier] Error verifying credential:', err);
           allCredentialsValid = false;

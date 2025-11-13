@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { networkInterfaces } from 'os';
-import { VeramoAgentService, CredentialService, OID4VCIssuerService } from '@oid4vci-example/vc-agent';
+import { VeramoAgentService, CredentialService, OID4VCIssuerService, StatusListService } from '@oid4vci-example/vc-agent';
 
 // Initialize services
 const veramoService = new VeramoAgentService();
@@ -10,6 +10,7 @@ const credentialService = new CredentialService(veramoService);
 // Create issuer identity (in production, this would be loaded from secure storage)
 let issuerService: OID4VCIssuerService;
 let issuerDid: string;
+let statusListService: StatusListService;
 
 function getLocalIpAddress(): string {
   const nets = networkInterfaces();
@@ -45,8 +46,19 @@ async function initializeIssuer() {
     credentialService,
   });
   
+  // Initialize status list service
+  const statusListUrl = `${issuerUrl}/status/1`;
+  statusListService = new StatusListService({
+    issuerDid: issuer.did,
+    statusListId: '1',
+    statusListUrl,
+    veramoService,
+  });
+  await statusListService.initialize();
+  
   console.log(`Issuer initialized with DID: ${issuerDid}`);
   console.log(`Issuer URL: ${issuerUrl}`);
+  console.log(`Status List URL: ${statusListUrl}`);
 }
 
 // Initialize Express app
@@ -270,14 +282,21 @@ app.post('/api/credential', async (req: Request, res: Response) => {
       }
     }
     
-    // Issue credential with the holder's DID
+    // Generate credential ID and create status entry BEFORE issuing
+    const credentialId = `urn:uuid:${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const statusEntry = statusListService.createStatusEntry(credentialId);
+    console.log('Created status entry for credential:', credentialId);
+    console.log('Status list index:', statusEntry.statusListIndex);
+    
+    // Issue credential with the holder's DID and credentialStatus
     const credentialResponse = await issuerService.issueCredential(
       credentialRequest,
       accessToken,
-      holderDid
+      holderDid,
+      statusEntry // Pass the status entry
     );
 
-    console.log('Credential issued successfully');
+    console.log('Credential issued successfully with revocation support');
     console.log('Credential JWT preview:', credentialResponse.credential.substring(0, 100) + '...');
     
     // Decode and log the credential for debugging
@@ -286,19 +305,122 @@ app.post('/api/credential', async (req: Request, res: Response) => {
       const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
       console.log('Credential payload:');
       console.log('  Issuer:', payload.iss);
-      console.log('  Subject (from sub):', payload.sub);  // JWT-VC puts subject in 'sub' claim
+      console.log('  Subject (from sub):', payload.sub);
       console.log('  Subject (from vc):', payload.vc?.credentialSubject?.id);
       console.log('  Types:', payload.vc?.type);
+      console.log('  Credential Status:', payload.vc?.credentialStatus);
     } catch (e) {
       console.error('Failed to decode credential:', e);
     }
 
-    res.json(credentialResponse);
+    // Include credential ID in response for revocation tracking
+    res.json({
+      ...credentialResponse,
+      credentialId, // Include this so frontend can display it
+    });
   } catch (error: any) {
     console.error('Error issuing credential:', error.message);
     console.error('Error stack:', error.stack);
     res.status(401).json({
       error: 'invalid_token',
+      error_description: error.message,
+    });
+  }
+});
+
+// Status List 2021 endpoint - serves the revocation status list
+app.get('/status/:listId', async (req: Request, res: Response) => {
+  try {
+    const { listId } = req.params;
+    
+    if (listId !== '1') {
+      return res.status(404).json({
+        error: 'Status list not found',
+      });
+    }
+
+    console.log('[STATUS] Generating status list credential...');
+    const statusListCredential = await statusListService.generateStatusListCredential();
+    
+    // Return as JWT
+    res.json({
+      credential: statusListCredential,
+    });
+  } catch (error: any) {
+    console.error('Error generating status list:', error);
+    res.status(500).json({
+      error: 'server_error',
+      error_description: error.message,
+    });
+  }
+});
+
+// Revoke a credential
+app.post('/api/revoke', async (req: Request, res: Response) => {
+  try {
+    const { credentialId } = req.body;
+
+    if (!credentialId) {
+      return res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'credentialId is required',
+      });
+    }
+
+    console.log(`[REVOKE] Revoking credential: ${credentialId}`);
+    const revoked = await statusListService.revokeCredential(credentialId);
+
+    if (!revoked) {
+      return res.status(404).json({
+        error: 'not_found',
+        error_description: 'Credential not found in status list',
+      });
+    }
+
+    console.log(`[REVOKE] ✓ Credential ${credentialId} revoked successfully`);
+    res.json({
+      revoked: true,
+      credentialId,
+    });
+  } catch (error: any) {
+    console.error('Error revoking credential:', error);
+    res.status(500).json({
+      error: 'server_error',
+      error_description: error.message,
+    });
+  }
+});
+
+// Check revocation status
+app.get('/api/status/:credentialId', async (req: Request, res: Response) => {
+  try {
+    const { credentialId } = req.params;
+
+    console.log(`[STATUS CHECK] Checking status for: ${credentialId}`);
+    const isRevoked = await statusListService.isRevoked(credentialId);
+
+    res.json({
+      credentialId,
+      revoked: isRevoked,
+    });
+  } catch (error: any) {
+    console.error('Error checking status:', error);
+    res.status(500).json({
+      error: 'server_error',
+      error_description: error.message,
+    });
+  }
+});
+
+// Get status list statistics
+app.get('/api/status-stats', async (req: Request, res: Response) => {
+  try {
+    const stats = statusListService.getStats();
+    res.json(stats);
+  } catch (error: any) {
+    console.error('Error getting stats:', error);
+    res.status(500).json({
+      error: 'server_error',
       error_description: error.message,
     });
   }

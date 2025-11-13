@@ -154,7 +154,7 @@ class OID4VCIssuerService {
     /**
      * Issue credential with access token
      */
-    async issueCredential(request, accessToken, holderDid) {
+    async issueCredential(request, accessToken, holderDid, credentialStatus) {
         // Validate access token
         const tokenMetadata = this.tokenStore.get(accessToken);
         if (!tokenMetadata) {
@@ -182,6 +182,7 @@ class OID4VCIssuerService {
             issuerDid: this.config.issuerDid,
             subjectDid: subjectDid,
             credentialSubject: offerMetadata.credentialSubject,
+            credentialStatus, // Include status if provided
         });
         // Mark token as used
         tokenMetadata.used = true;

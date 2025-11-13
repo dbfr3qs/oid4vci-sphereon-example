@@ -13,11 +13,14 @@ class CredentialService {
      * Create a Verifiable Credential
      */
     async createCredential(options) {
-        const { issuerDid, subjectDid, credentialSubject, expirationDate, additionalTypes } = options;
+        const { issuerDid, subjectDid, credentialSubject, expirationDate, additionalTypes, credentialStatus } = options;
         console.log('[CredentialService] Creating credential with:');
         console.log('  issuerDid:', issuerDid);
         console.log('  subjectDid:', subjectDid);
         console.log('  credentialSubject:', JSON.stringify(credentialSubject));
+        if (credentialStatus) {
+            console.log('  credentialStatus:', JSON.stringify(credentialStatus));
+        }
         const types = [
             credentials_1.CREDENTIAL_TYPES.VERIFIABLE_CREDENTIAL,
             credentials_1.CREDENTIAL_TYPES.IDENTITY,
@@ -36,6 +39,14 @@ class CredentialService {
                 ...credentialSubjectWithoutId,
             },
         };
+        // Add credentialStatus if provided
+        if (credentialStatus) {
+            credential.credentialStatus = credentialStatus;
+            // Add Status List 2021 context
+            if (!credential['@context'].includes('https://w3id.org/vc/status-list/2021/v1')) {
+                credential['@context'].push('https://w3id.org/vc/status-list/2021/v1');
+            }
+        }
         console.log('[CredentialService] Final credential object:', JSON.stringify(credential, null, 2));
         if (expirationDate) {
             credential.expirationDate = expirationDate;

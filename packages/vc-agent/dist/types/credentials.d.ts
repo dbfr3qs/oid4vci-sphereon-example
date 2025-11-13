@@ -26,6 +26,13 @@ export interface CreateCredentialOptions {
     credentialSubject: IdentityCredentialSubject;
     expirationDate?: string;
     additionalTypes?: string[];
+    credentialStatus?: {
+        id: string;
+        type: string;
+        statusPurpose: string;
+        statusListIndex: string;
+        statusListCredential: string;
+    };
 }
 /**
  * Options for creating a presentation

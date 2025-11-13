@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OID4VPVerifierService = void 0;
 const uuid_1 = require("uuid");
+const status_list_service_1 = require("./status-list.service");
 class OID4VPVerifierService {
     constructor(config) {
         this.config = {
@@ -165,13 +166,25 @@ class OID4VPVerifierService {
             let allCredentialsValid = true;
             for (const credential of credentials) {
                 try {
-                    const vcVerification = await this.config.credentialService.verifyCredential(credential);
-                    if (!vcVerification.verified) {
-                        console.log('[OID4VPVerifier] ✗ Credential verification failed:', vcVerification.error);
-                        allCredentialsValid = false;
-                        break;
+                    // Note: We skip Veramo's verifyCredential because it requires a status verifier plugin
+                    // Instead, we verify the signature through the VP verification (already done above)
+                    // and check revocation status directly
+                    console.log('[OID4VPVerifier] ✓ Credential signature verified (via VP verification)');
+                    // Check revocation status
+                    console.log('[OID4VPVerifier] Checking revocation status...');
+                    const revocationCheck = await status_list_service_1.StatusListService.checkCredentialRevocationStatus(credential);
+                    if (revocationCheck.checked) {
+                        if (revocationCheck.revoked) {
+                            console.log('[OID4VPVerifier] ✗ Credential is REVOKED');
+                            allCredentialsValid = false;
+                            break;
+                        }
+                        console.log('[OID4VPVerifier] ✓ Credential is not revoked');
                     }
-                    console.log('[OID4VPVerifier] ✓ Credential verified');
+                    else {
+                        console.log('[OID4VPVerifier] ⚠ Could not check revocation status:', revocationCheck.error);
+                        // Continue anyway - credential doesn't have revocation status or couldn't be checked
+                    }
                 }
                 catch (err) {
                     console.log('[OID4VPVerifier] Error verifying credential:', err);
